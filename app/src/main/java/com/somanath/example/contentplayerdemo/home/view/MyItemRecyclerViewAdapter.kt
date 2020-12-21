@@ -14,12 +14,13 @@ import com.somanath.example.contentplayerdemo.home.utility.Util
 import com.somanath.example.contentplayerdemo.home.view.dummy.DummyContent.DummyItem
 import java.com.somanath.example.contentplayerdemo.home.interfaces.IDurationCallBack
 import java.com.somanath.example.contentplayerdemo.home.interfaces.IOnItemClickHandler
+import javax.inject.Inject
 
 /**
  * [RecyclerView.Adapter] that can display a [DummyItem].
  * TODO: Replace the implementation with code for your data type.
  */
-class MyItemRecyclerViewAdapter(
+class MyItemRecyclerViewAdapter @Inject constructor(
     private val values: List<MediaItem>,  private val iOnItemClickHandler: IOnItemClickHandler)
     : RecyclerView.Adapter<MyItemRecyclerViewAdapter.ViewHolder>() {
 
