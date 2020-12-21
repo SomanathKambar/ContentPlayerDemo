@@ -77,5 +77,10 @@
             android:layout_width="30dp"
             android:src="@drawable/ic_baseline_track_changes_24"
             android:layout_height="30dp"/>
+        <ImageView
+            android:id="@+id/pipSwitch"
+            android:layout_width="30dp"
+            android:src="@drawable/ic_baseline_picture_in_picture_alt_24"
+            android:layout_height="30dp"/>
     </LinearLayout>
 </LinearLayout>

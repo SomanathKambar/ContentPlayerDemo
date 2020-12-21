@@ -12,16 +12,16 @@
         tools:layout="@layout/fragment_home_list" >
         <action
             android:id="@+id/action_homeFragment_to_playerFragment"
-            app:destination="@id/playerFragment" />
+            app:destination="@id/playerActivity" />
     </fragment>
-    <fragment
-        android:id="@+id/playerFragment"
-        android:name="java.com.somanath.example.contentplayerdemo.home.view.PlayerFragment"
-        android:label="PlayerFragment" >
+    <activity
+        android:id="@+id/playerActivity"
+        android:name="java.com.somanath.example.contentplayerdemo.home.player.PlayerActivity"
+        android:label="playerActivity" >
         <argument
             android:name="content_url"
             app:argType="string"
             android:defaultValue="none" />
-    </fragment>
+    </activity>
 
 </navigation>

@@ -55,7 +55,7 @@ class HomeFragment : Fragment() {
                             override fun onItemClick(url: String) {
                                 val bundle = Bundle()
                                 bundle.putString("content_url",url)
-                                findNavController().navigate(R.id.playerFragment,bundle)
+                                findNavController().navigate(R.id.playerActivity,bundle)
                             }
                         })
                 })

@@ -1,12 +1,13 @@
 package java.com.somanath.example.contentplayerdemo.home.view
 
+import android.app.PictureInPictureParams
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.util.Rational
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.OnClickListener
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -20,7 +21,6 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedTrackInfo
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.ui.TrackSelectionDialogBuilder
-import com.google.android.exoplayer2.ui.TrackSelectionView
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.MimeTypes
 import com.google.android.exoplayer2.util.Util
@@ -46,7 +46,7 @@ class PlayerFragment : Fragment() , Player.EventListener{
     private var currentWindow = 0
     private var fullscreenButton: ImageView? = null
     private lateinit var  videoQualityChanger : ImageView
-
+    private lateinit var pipSwitch: ImageView
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -60,14 +60,23 @@ class PlayerFragment : Fragment() , Player.EventListener{
         exoplayerView = view.findViewById<PlayerView>(R.id.exoplayerView)
         progressBar = view.findViewById(R.id.progressBar)
         videoQualityChanger = view.findViewById(R.id.exo_track_selection_view)
+        pipSwitch = view.findViewById(R.id.pipSwitch)
         activity?.actionBar?.setDisplayHomeAsUpEnabled(true)
         initFullScreenButton()
 
-        videoQualityChanger.setOnClickListener(
-            OnClickListener {
-                showQualityPopup()
+        videoQualityChanger.setOnClickListener { showQualityPopup() }
+        pipSwitch.setOnClickListener{
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val mPictureInPictureParamsBuilder = PictureInPictureParams.Builder()
+                val aspectRatio = Rational(200, 200)
+                mPictureInPictureParamsBuilder.setAspectRatio(aspectRatio)
+                activity?.enterPictureInPictureMode(mPictureInPictureParamsBuilder.build())
+            } else {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                    activity?.enterPictureInPictureMode()
+                }
             }
-        )
+        }
     }
 
     fun initFullScreenButton(){
@@ -143,7 +152,8 @@ class PlayerFragment : Fragment() , Player.EventListener{
 
 
     private fun initializePlayer() {
-        contentUrl = arguments?.getString("content_url")!!
+
+        contentUrl = activity?.intent?.getStringExtra("content_url")!!
 
         if (simpleExoplayer == null) {
 
@@ -231,12 +241,13 @@ class PlayerFragment : Fragment() , Player.EventListener{
     override fun onPlaybackStateChanged(state: Int) {
         super.onPlaybackStateChanged(state)
         when(state){
-            Player.STATE_READY -> {Log.d(TAG,"STATE_READY")
+            Player.STATE_READY -> {
+                Log.d(TAG, "STATE_READY")
                 videoQualityChanger.isEnabled = true
             }
-            Player.STATE_BUFFERING-> Log.d(TAG,"STATE_BUFFERING")
-            Player.STATE_ENDED -> Log.d(TAG,"STATE_ENDED")
-            Player.STATE_IDLE ->  videoQualityChanger.isEnabled = false
+            Player.STATE_BUFFERING -> Log.d(TAG, "STATE_BUFFERING")
+            Player.STATE_ENDED -> Log.d(TAG, "STATE_ENDED")
+            Player.STATE_IDLE -> videoQualityChanger.isEnabled = false
         }
     }
 
@@ -259,6 +270,15 @@ class PlayerFragment : Fragment() , Player.EventListener{
             )
             build.setAllowAdaptiveSelections(allowAdaptiveSelections)
             build.build().show()
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
+        if(isInPictureInPictureMode){
+
+        } else{
+
         }
     }
 }
