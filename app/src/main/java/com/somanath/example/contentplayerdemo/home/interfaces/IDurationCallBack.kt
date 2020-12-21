@@ -1,4 +1,5 @@
 package java.com.somanath.example.contentplayerdemo.home.interfaces
 
-interface IDurationCallBack {
+open interface IDurationCallBack {
+    fun onDurationRetrieved(duration: String)
 }

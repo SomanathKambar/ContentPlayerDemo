@@ -1,61 +1,51 @@
 package java.com.somanath.example.contentplayerdemo.home.view
 
+import android.content.pm.ActivityInfo
+import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.OnClickListener
 import android.view.ViewGroup
-import android.view.WindowManager
-import android.widget.Button
-import androidx.appcompat.app.AppCompatActivity
+import android.widget.ImageView
+import android.widget.ProgressBar
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.google.android.exoplayer2.*
+import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
+import com.google.android.exoplayer2.source.ExtractorMediaSource
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
+import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedTrackInfo
+import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.ui.TrackSelectionDialogBuilder
+import com.google.android.exoplayer2.ui.TrackSelectionView
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import com.google.android.exoplayer2.util.MimeTypes
+import com.google.android.exoplayer2.util.Util
+import com.somanath.example.contentplayerdemo.R
+
 
 /**
  * An example full-screen fragment that shows and hides the system UI (i.e.
  * status bar and navigation/system bar) with user interaction.
  */
-class PlayerFragment : Fragment() {
-    private val hideHandler = Handler()
+class PlayerFragment : Fragment() , Player.EventListener{
 
-    @Suppress("InlinedApi")
-    private val hidePart2Runnable = Runnable {
-        // Delayed removal of status and navigation bar
-
-        // Note that some of these constants are new as of API 16 (Jelly Bean)
-        // and API 19 (KitKat). It is safe to use them, as they are inlined
-        // at compile-time and do nothing on earlier devices.
-        val flags =
-            View.SYSTEM_UI_FLAG_LOW_PROFILE or
-                    View.SYSTEM_UI_FLAG_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-        activity?.window?.decorView?.systemUiVisibility = flags
-        (activity as? AppCompatActivity)?.supportActionBar?.hide()
+    var fullscreen = false
+    companion object{
+        const val TAG = "PlayerFragment"
     }
-    private val showPart2Runnable = Runnable {
-        // Delayed display of UI elements
-        fullscreenContentControls?.visibility = View.VISIBLE
-    }
-    private var visible: Boolean = false
-    private val hideRunnable = Runnable { hide() }
-
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
-    private val delayHideTouchListener = View.OnTouchListener { _, _ ->
-        if (AUTO_HIDE) {
-            delayedHide(AUTO_HIDE_DELAY_MILLIS)
-        }
-        false
-    }
-
-    private var dummyButton: Button? = null
-    private var fullscreenContent: View? = null
-    private var fullscreenContentControls: View? = null
+    private  var simpleExoplayer: SimpleExoPlayer? = null
+    private  lateinit var progressBar: ProgressBar
+    private var playbackPosition: Long = 0
+    private lateinit var contentUrl : String
+    private lateinit var exoplayerView: PlayerView
+    private var playWhenReady = true
+    private var currentWindow = 0
+    private var fullscreenButton: ImageView? = null
+    private lateinit var  videoQualityChanger : ImageView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -67,105 +57,208 @@ class PlayerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        exoplayerView = view.findViewById<PlayerView>(R.id.exoplayerView)
+        progressBar = view.findViewById(R.id.progressBar)
+        videoQualityChanger = view.findViewById(R.id.exo_track_selection_view)
+        activity?.actionBar?.setDisplayHomeAsUpEnabled(true)
+        initFullScreenButton()
 
-        visible = true
+        videoQualityChanger.setOnClickListener(
+            OnClickListener {
+                showQualityPopup()
+            }
+        )
+    }
 
-        dummyButton = view.findViewById(R.id.dummy_button)
-        fullscreenContent = view.findViewById(R.id.fullscreen_content)
-        fullscreenContentControls = view.findViewById(R.id.fullscreen_content_controls)
-        // Set up the user interaction to manually show or hide the system UI.
-        fullscreenContent?.setOnClickListener { toggle() }
+    fun initFullScreenButton(){
+        fullscreenButton = exoplayerView.findViewById(R.id.exo_fullscreen_icon)
+        fullscreenButton!!.setOnClickListener {
+            if (fullscreen) {
+                fullscreenButton!!.setImageDrawable(
+                    ContextCompat.getDrawable(
+                        requireActivity(),
+                        R.drawable.ic_fullscreen_open
+                    )
+                )
 
-        // Upon interacting with UI controls, delay any scheduled hide()
-        // operations to prevent the jarring behavior of controls going away
-        // while interacting with the UI.
-        dummyButton?.setOnTouchListener(delayHideTouchListener)
+                if (activity?.actionBar != null) {
+                    activity?.actionBar!!.show()
+                }
+                activity?.window?.decorView?.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                val params = exoplayerView.getLayoutParams() as ConstraintLayout.LayoutParams
+                params.width = ViewGroup.LayoutParams.MATCH_PARENT
+                params.height = (200 * getResources().getDisplayMetrics().density).toInt()
+                exoplayerView.setLayoutParams(params)
+                fullscreen = false
+            } else {
+                fullscreenButton!!.setImageDrawable(
+                    ContextCompat.getDrawable(
+                        requireActivity(),
+                        R.drawable.ic_fullscreen_close
+                    )
+                )
+                if (activity?.actionBar != null) {
+                    activity?.actionBar!!.hide()
+                }
+                activity?.window?.decorView?.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION)
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                val params = exoplayerView.getLayoutParams() as ConstraintLayout.LayoutParams
+                params.width = ViewGroup.LayoutParams.MATCH_PARENT
+                params.height = ViewGroup.LayoutParams.MATCH_PARENT
+                exoplayerView.setLayoutParams(params)
+                fullscreen = true
+            }
+        }
+    }
+    override fun onStart() {
+        super.onStart()
+        if (Util.SDK_INT >= 24) {
+            initializePlayer()
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
-
-        // Trigger the initial hide() shortly after the activity has been
-        // created, to briefly hint to the user that UI controls
-        // are available.
-        delayedHide(100)
+        if (Util.SDK_INT < 24 || simpleExoplayer == null) {
+            initializePlayer()
+        }
     }
 
     override fun onPause() {
         super.onPause()
-        activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+        if (Util.SDK_INT < 24) {
+            releasePlayer()
+        }
+    }
 
-        // Clear the systemUiVisibility flag
-        activity?.window?.decorView?.systemUiVisibility = 0
-        show()
+    override fun onStop() {
+        super.onStop()
+        if (Util.SDK_INT >= 24) {
+            releasePlayer()
+        }
+    }
+
+
+    private fun initializePlayer() {
+        contentUrl = arguments?.getString("content_url")!!
+
+        if (simpleExoplayer == null) {
+
+            val trackSelector = DefaultTrackSelector(requireContext())
+            trackSelector.setParameters(
+                trackSelector.buildUponParameters().setMaxVideoSizeSd()
+            )
+            trackSelector.experimentalAllowMultipleAdaptiveSelections()
+
+            simpleExoplayer = SimpleExoPlayer.Builder(requireActivity())
+                .setTrackSelector(trackSelector)
+                .build()
+            simpleExoplayer?.addListener(this)
+            simpleExoplayer?.prepare()
+            exoplayerView.setPlayer(simpleExoplayer)
+        val mediaItem = MediaItem.Builder()
+            .setUri(contentUrl)
+            .setMimeType(MimeTypes.APPLICATION_MPD)
+            .build()
+        val userAgent = Util.getUserAgent(
+            requireContext(),
+            requireActivity().getString(R.string.app_name)
+        )
+        val mediaSource = ExtractorMediaSource
+            .Factory(DefaultDataSourceFactory(requireContext(), userAgent))
+            .setExtractorsFactory(DefaultExtractorsFactory())
+            .createMediaSource(Uri.parse(contentUrl))
+       // simpleExoplayer?.addMediaItem(mediaItem)
+        simpleExoplayer?.prepare(mediaSource)
+        simpleExoplayer?.setPlayWhenReady(playWhenReady)
+        simpleExoplayer?.seekTo(currentWindow, playbackPosition)
+            showQualityPopup()
+        //simpleExoplayer?.prepare()
+    }
+
+//    private fun initializePlayer() {
+//        contentUrl = arguments?.getString("content_url")!!
+//        simpleExoplayer = SimpleExoPlayer.Builder(requireContext()).build()
+//        preparePlayer(contentUrl, "dash")
+//        exoplayerView.player = simpleExoplayer
+//        simpleExoplayer!!.seekTo(playbackPosition)
+//        simpleExoplayer!!.playWhenReady = true
+//        simpleExoplayer!!.addListener(this)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        dummyButton = null
-        fullscreenContent = null
-        fullscreenContentControls = null
     }
 
-    private fun toggle() {
-        if (visible) {
-            hide()
-        } else {
-            show()
+    private fun preparePlayer(videoUrl: String, type: String) {
+        val uri = Uri.parse(videoUrl)
+      //  val mediaSource = buildMediaSource(uri, type)
+        val mediaItem = MediaItem.Builder()
+            .setUri(uri)
+            .setMimeType(MimeTypes.APPLICATION_MPD)
+            .build()
+        simpleExoplayer!!.setMediaItem(mediaItem)
+        simpleExoplayer!!.prepare()
+    }
+
+    override fun onPlayerError(error: ExoPlaybackException) {
+        // handle error
+        Log.d(TAG, error.toString())
+    }
+
+    override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
+        if (playbackState == Player.STATE_BUFFERING)
+         progressBar.visibility = View.VISIBLE
+        else if (playbackState == Player.STATE_READY || playbackState == Player.STATE_ENDED)
+            progressBar.visibility = View.INVISIBLE
+    }
+
+
+    private fun releasePlayer() {
+        if (simpleExoplayer != null) {
+            playWhenReady = simpleExoplayer!!.playWhenReady
+            playbackPosition = simpleExoplayer!!.currentPosition
+            currentWindow = simpleExoplayer!!.currentWindowIndex
+            simpleExoplayer!!.removeListener(this)
+            simpleExoplayer!!.release()
+            simpleExoplayer = null
         }
     }
 
-    private fun hide() {
-        // Hide UI first
-        fullscreenContentControls?.visibility = View.GONE
-        visible = false
-
-        // Schedule a runnable to remove the status and navigation bar after a delay
-        hideHandler.removeCallbacks(showPart2Runnable)
-        hideHandler.postDelayed(hidePart2Runnable, UI_ANIMATION_DELAY.toLong())
+    override fun onPlaybackStateChanged(state: Int) {
+        super.onPlaybackStateChanged(state)
+        when(state){
+            Player.STATE_READY -> {Log.d(TAG,"STATE_READY")
+                videoQualityChanger.isEnabled = true
+            }
+            Player.STATE_BUFFERING-> Log.d(TAG,"STATE_BUFFERING")
+            Player.STATE_ENDED -> Log.d(TAG,"STATE_ENDED")
+            Player.STATE_IDLE ->  videoQualityChanger.isEnabled = false
+        }
     }
 
-    @Suppress("InlinedApi")
-    private fun show() {
-        // Show the system bar
-        fullscreenContent?.systemUiVisibility =
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-        visible = true
-
-        // Schedule a runnable to display UI elements after a delay
-        hideHandler.removeCallbacks(hidePart2Runnable)
-        hideHandler.postDelayed(showPart2Runnable, UI_ANIMATION_DELAY.toLong())
-        (activity as? AppCompatActivity)?.supportActionBar?.show()
-    }
-
-    /**
-     * Schedules a call to hide() in [delayMillis], canceling any
-     * previously scheduled calls.
-     */
-    private fun delayedHide(delayMillis: Int) {
-        hideHandler.removeCallbacks(hideRunnable)
-        hideHandler.postDelayed(hideRunnable, delayMillis.toLong())
-    }
-
-    companion object {
-        /**
-         * Whether or not the system UI should be auto-hidden after
-         * [AUTO_HIDE_DELAY_MILLIS] milliseconds.
-         */
-        private const val AUTO_HIDE = true
-
-        /**
-         * If [AUTO_HIDE] is set, the number of milliseconds to wait after
-         * user interaction before hiding the system UI.
-         */
-        private const val AUTO_HIDE_DELAY_MILLIS = 3000
-
-        /**
-         * Some older devices needs a small delay between UI widget updates
-         * and a change of the status and navigation bar.
-         */
-        private const val UI_ANIMATION_DELAY = 300
+    private fun showQualityPopup(){
+        val trackSelector = simpleExoplayer?.trackSelector as DefaultTrackSelector
+        val mappedTrackInfo: MappedTrackInfo? = trackSelector.currentMappedTrackInfo
+        if (mappedTrackInfo != null) {
+            val title: CharSequence = "Select Resolution "
+            val rendererIndex = 0 // renderer for video
+            val rendererType = mappedTrackInfo.getRendererType(rendererIndex)
+            val allowAdaptiveSelections = (rendererType == C.TRACK_TYPE_VIDEO
+                    || (rendererType == C.TRACK_TYPE_AUDIO
+                    && mappedTrackInfo.getTypeSupport(C.TRACK_TYPE_VIDEO)
+                    == MappedTrackInfo.RENDERER_SUPPORT_NO_TRACKS))
+            val build = TrackSelectionDialogBuilder(
+                requireActivity(),
+                title,
+                trackSelector,
+                rendererIndex
+            )
+            build.setAllowAdaptiveSelections(allowAdaptiveSelections)
+            build.build().show()
+        }
     }
 }

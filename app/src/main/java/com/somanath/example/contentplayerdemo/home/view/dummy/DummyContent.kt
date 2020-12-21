@@ -1,5 +1,6 @@
 package com.somanath.example.contentplayerdemo.home.view.dummy
 
+import androidx.annotation.VisibleForTesting
 import java.util.ArrayList
 import java.util.HashMap
 
@@ -9,6 +10,7 @@ import java.util.HashMap
  *
  * TODO: Replace all uses of this class before publishing your app.
  */
+@VisibleForTesting
 object DummyContent {
 
     /**

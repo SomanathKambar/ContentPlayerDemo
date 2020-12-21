@@ -6,8 +6,9 @@
     android:name="com.somanath.example.contentplayerdemo.home.view.HomeFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:layout_marginLeft="16dp"
-    android:layout_marginRight="16dp"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:background="@color/black"
     app:layoutManager="LinearLayoutManager"
     tools:context=".home.view.HomeFragment"
-    tools:listitem="@layout/fragment_home" />
+    tools:listitem="@layout/list_content" />

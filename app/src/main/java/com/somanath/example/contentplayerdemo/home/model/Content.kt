@@ -1,4 +1,4 @@
-package com.somanath.example.contentplayerdemo.home.player
+package com.somanath.example.contentplayerdemo.home.model
 
 
 import com.google.gson.annotations.SerializedName
