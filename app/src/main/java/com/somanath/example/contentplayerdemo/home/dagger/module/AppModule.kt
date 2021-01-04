@@ -1,14 +1,20 @@
 package java.com.somanath.example.contentplayerdemo.home.dagger.module
 
-import android.app.Application
-import android.content.Context
 import dagger.Module
 import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ApplicationComponent
+import java.com.somanath.example.contentplayerdemo.home.view_model.MainRepository
 import javax.inject.Singleton
 
 @Module
-class AppModule(val app: Application) {
+@InstallIn(ApplicationComponent::class)
+object AppModule{
+//    @Provides
+//    @Singleton
+//    fun provideContext(): Context = Application
+
     @Provides
     @Singleton
-    fun provideContext(): Context = app
+    fun provideMainRepository() = MainRepository()
 }

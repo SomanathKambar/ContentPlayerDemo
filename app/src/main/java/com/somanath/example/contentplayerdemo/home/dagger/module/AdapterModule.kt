@@ -1,12 +1,13 @@
 package java.com.somanath.example.contentplayerdemo.home.dagger.module
 
-import com.somanath.example.contentplayerdemo.home.model.MediaItem
 import dagger.Module
-import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ApplicationComponent
 
 @Module
-class AdapterModule(private val list : List<MediaItem>) {
+@InstallIn(ApplicationComponent::class)
+class AdapterModule(/*private val list : List<MediaItem>*/) {
 
-    @Provides
-    fun getItemList(): List<MediaItem> = list
+//    @Provides
+//    fun getItemList(): List<MediaItem> = list
 }

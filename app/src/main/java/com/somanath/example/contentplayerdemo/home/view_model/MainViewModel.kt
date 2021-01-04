@@ -1,6 +1,7 @@
 package com.somanath.example.contentplayerdemo.home.view_model
 
 import android.app.Application
+import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import com.google.gson.Gson
@@ -13,9 +14,9 @@ import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import java.com.somanath.example.contentplayerdemo.home.interfaces.IMainViewModel
 
-class MainViewModel(app : Application) : AndroidViewModel(app) , IMainViewModel{
+class MainViewModel @ViewModelInject constructor(app : Application) : AndroidViewModel(app) , IMainViewModel{
 
-    private var mContent : MutableLiveData<Content>? = null;
+    private var mContent : MutableLiveData<Content>? = null
 
     override fun getContents(): MutableLiveData<Content> {
         if(mContent == null){
